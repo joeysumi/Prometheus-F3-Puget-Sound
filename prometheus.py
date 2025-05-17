@@ -15,7 +15,7 @@ class Prometheus:
     SQL_QUERY_LIMIT = 10
 
     def __init__(self, credentials, mysql_handler=MySqlHandler, s3_handler=S3Handler):
-        self.mysql_handler = mysql_handler(**credentials)
+        self.mysql_handler = mysql_handler(credentials)
         self.s3_handler = s3_handler(self.S3_BUCKET)
         self.most_recent_image_pulled = None
 

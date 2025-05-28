@@ -48,7 +48,7 @@ class S3Handler:
     def _cleanup_directory(self, file_path, max_file_number) -> None:
         directory_break_line = file_path.rfind("/")
         directory = file_path[:directory_break_line]
-        directory_object_list = self.s3_bucket.objects.filter(Prefix=directory)
+        directory_object_list = [image for image in self.s3_bucket.objects.filter(Prefix=directory)]
         if len(directory_object_list) <= max_file_number:
             return
 

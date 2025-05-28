@@ -14,11 +14,13 @@ class MySqlHandler:
         self.cursor = self.database.cursor()
 
     def disconnect_from_database(self) -> None:
-        self.cursor.close()
         self.database.close()
+        self.cursor.close()
         self.cursor = None
         self.database = None
 
-    def run_query(self, query: str, limit=1) -> list[tuple]:
+    def run_query(self, query: str) -> None:
         self.cursor.execute(query)
-        return self.cursor.fetchsome(size=limit)
+
+    def fetch_query_data(self, limit=1):
+        return self.cursor.fetchmany(size=limit)

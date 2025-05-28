@@ -17,13 +17,13 @@ class Prometheus:
     def __init__(self, credentials, mysql_handler=MySqlHandler, s3_handler=S3Handler):
         self.mysql_handler = mysql_handler(credentials)
         self.s3_handler = s3_handler(self.S3_BUCKET)
-        self.most_recent_image_pulled = None
+        self.most_recent_image_pulled = ""
 
     def run(self):
         self.most_recent_image_pulled = self._get_most_recently_used_image()
         new_images_list = self._get_list_of_new_images()
         if len(new_images_list) > 0:  # there are new images
-            self._record_last_image_taken(new_images_list[-1])
+            self._record_last_image_taken(new_images_list[0])
 
         for image_data in new_images_list:
             image_data_with_image_information = self._get_image_data_from_url(image_data)
@@ -33,35 +33,37 @@ class Prometheus:
         if not self.s3_handler.is_file_in_directory(directory_path="", file_name=self.LAST_PULLED_IMAGE_NAME_DOCUMENT):
             return
 
-        object_data = self.s3_handler.get_s3_resource_object_data(self.most_recent_image_pulled)
+        object_data = self.s3_handler.get_s3_resource_object_data(self.LAST_PULLED_IMAGE_NAME_DOCUMENT)
         most_recent_image_name = object_data.get("Body").read().decode() if object_data.get("Body") else None
         return most_recent_image_name
 
     def _get_list_of_new_images(self) -> list[dict]:
         query = (
-            "SELECT ao, bd_date, json"
-            "FROM beatdowns b"
-            "JOIN aos a"
-            "WHERE a.channel_id = b.ao_id"
-            "AND ao LIKE \"ao%\""
-            "AND json LIKE \"%http%\""
+            "SELECT ao, bd_date, json "
+            "FROM beatdowns b "
+            "JOIN aos a "
+            "WHERE a.channel_id = b.ao_id "
+            "AND ao LIKE \"ao%\" "
+            "AND json LIKE \"%http%\" "
             "ORDER BY bd_date DESC"
         )
         self.mysql_handler.connect_to_database()
 
         image_list = []
+        self.mysql_handler.run_query(query)
         while True:  # there is no "False" because "return" breaks the while loop
-            query_results = self._get_query_results(query)
+            query_results = self._get_query_results()
             verified_query_results = self._remove_images_already_exported(query_results)
+
+            image_list += verified_query_results
 
             #  Need to check if no results left OR the list is less than query result (stopped bc of last used image)
             if len(verified_query_results) == 0 or len(verified_query_results) % self.SQL_QUERY_LIMIT != 0:
                 self.mysql_handler.disconnect_from_database()
                 return image_list
-            image_list += verified_query_results
 
-    def _get_query_results(self, query) -> list[dict]:
-        query_results = self.mysql_handler.run_query(query, limit=self.SQL_QUERY_LIMIT)
+    def _get_query_results(self) -> list[dict]:
+        query_results = self.mysql_handler.fetch_query_data(limit=self.SQL_QUERY_LIMIT)
         formatted_results = self._format_results(query_results)
         return formatted_results
 
@@ -114,6 +116,8 @@ class Prometheus:
         # if for some reason image already exists in directory
         if self.s3_handler.is_file_in_directory(image_data_dict["ao"], image_data_dict["filename"]):
             return
+
+        print(f"Saving file {image_data_dict["filename"]} to {image_data_dict["ao"]}")
 
         self.s3_handler.save_file_to_directory(
             file_data=image_data_dict["image_bytes"],

@@ -15,7 +15,6 @@ class MySqlHandler:
 
     def disconnect_from_database(self) -> None:
         self.database.close()
-        self.cursor.close()
         self.cursor = None
         self.database = None
 

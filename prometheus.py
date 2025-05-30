@@ -11,7 +11,7 @@ class Prometheus:
 
     S3_BUCKET = "f3pugetsound-slack-pictures"
     LAST_PULLED_IMAGE_NAME_DOCUMENT = "last_file.txt"
-    MAX_FILES_IN_AO = 10
+    MAX_FILES_IN_AO = 150
     SQL_QUERY_LIMIT = 10
 
     def __init__(self, credentials, mysql_handler=MySqlHandler, s3_handler=S3Handler):

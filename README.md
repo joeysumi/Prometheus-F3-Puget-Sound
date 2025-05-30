@@ -8,4 +8,4 @@ It is so named because in Greek mythology Prometheus steals fire from the gods a
 ## !! Important !!
 * Currently this code is written to work on AWS Lambda (hence the file `lambda_function.py`) but it could be 
 modified to work with another service fairly easily.
-
+* Modify the `configuration.py` file to make any modifications to the functionality of the app.

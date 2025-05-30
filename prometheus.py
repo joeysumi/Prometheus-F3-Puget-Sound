@@ -5,18 +5,24 @@ import requests
 
 from mysql_handler import MySqlHandler
 from s3_handler import S3Handler
+from configuration import (
+    S3_BUCKET,
+    LAST_PULLED_IMAGE_NAME_DOCUMENT,
+    MAX_FILES_IN_AO,
+    SQL_QUERY_LIMIT
+)
 
 
 class Prometheus:
 
-    S3_BUCKET = "f3pugetsound-slack-pictures"
-    LAST_PULLED_IMAGE_NAME_DOCUMENT = "last_file.txt"
-    MAX_FILES_IN_AO = 150
-    SQL_QUERY_LIMIT = 10
-
     def __init__(self, credentials, mysql_handler=MySqlHandler, s3_handler=S3Handler):
+        self._s3_bucket = S3_BUCKET
+        self._last_pulled_image_document = LAST_PULLED_IMAGE_NAME_DOCUMENT
+        self._max_files_in_ao = MAX_FILES_IN_AO
+        self._sql_query_limit = SQL_QUERY_LIMIT
+
         self.mysql_handler = mysql_handler(credentials)
-        self.s3_handler = s3_handler(self.S3_BUCKET)
+        self.s3_handler = s3_handler(self._s3_bucket)
         self.most_recent_image_pulled = ""
 
     def run(self):
@@ -30,10 +36,10 @@ class Prometheus:
             self._save_image_to_s3_bucket(image_data_with_image_information)
 
     def _get_most_recently_used_image(self):
-        if not self.s3_handler.is_file_in_directory(directory_path="", file_name=self.LAST_PULLED_IMAGE_NAME_DOCUMENT):
+        if not self.s3_handler.is_file_in_directory(directory_path="", file_name=self._last_pulled_image_document):
             return
 
-        object_data = self.s3_handler.get_s3_resource_object_data(self.LAST_PULLED_IMAGE_NAME_DOCUMENT)
+        object_data = self.s3_handler.get_s3_resource_object_data(self._last_pulled_image_document)
         most_recent_image_name = object_data.get("Body").read().decode() if object_data.get("Body") else None
         return most_recent_image_name
 
@@ -58,12 +64,12 @@ class Prometheus:
             image_list += verified_query_results
 
             #  Need to check if no results left OR the list is less than query result (stopped bc of last used image)
-            if len(verified_query_results) == 0 or len(verified_query_results) % self.SQL_QUERY_LIMIT != 0:
+            if len(verified_query_results) == 0 or len(verified_query_results) % self._sql_query_limit != 0:
                 self.mysql_handler.disconnect_from_database()
                 return image_list
 
     def _get_query_results(self) -> list[dict]:
-        query_results = self.mysql_handler.fetch_query_data(limit=self.SQL_QUERY_LIMIT)
+        query_results = self.mysql_handler.fetch_query_data(limit=self._sql_query_limit)
         formatted_results = self._format_results(query_results)
         return formatted_results
 
@@ -104,7 +110,7 @@ class Prometheus:
 
     def _record_last_image_taken(self, image_data):
         filename = image_data["filename"]
-        self.s3_handler.update_s3_resource_object(self.LAST_PULLED_IMAGE_NAME_DOCUMENT, filename)
+        self.s3_handler.update_s3_resource_object(self._last_pulled_image_document, filename)
 
     @staticmethod
     def _get_image_data_from_url(image_data_dict: dict) -> dict:
@@ -122,5 +128,5 @@ class Prometheus:
         self.s3_handler.save_file_to_directory(
             file_data=image_data_dict["image_bytes"],
             directory_path=f"{image_data_dict["ao"]}/{image_data_dict["filename"]}",
-            max_files_in_directory=self.MAX_FILES_IN_AO,
+            max_files_in_directory=self._max_files_in_ao,
         )

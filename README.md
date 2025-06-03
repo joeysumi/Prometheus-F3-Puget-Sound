@@ -13,3 +13,5 @@ modified to work with another service fairly easily.
   * LAST_PULLED_IMAGE_NAME_DOCUMENT - the name of a file that records the latest image pulled from PAXMiner so not all results need to be pulled into the app
   * MAX_FILES_IN_AO - how many images are allowed to be saved in each AO's file (and consequently put on the website)
   * SQL_QUERY_LIMIT - a limit on querying from PAXMiner so we don't make huge requests (will cycle through until it hits the image recorded in the LAST_PULLED_IMAGE_NAME_DOCUMENT
+
+PAXMinder Database Credentials are environment variables set in the AWS Lambda.
